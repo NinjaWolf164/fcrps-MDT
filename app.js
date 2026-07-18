@@ -266,14 +266,27 @@ function initSmartCombos(root=document){
  });
 }
 function renderModule(id){
+ if(id==="portrecords")return renderPortRecordsPage();
  const c=configs[id],el=$("#"+id),rows=deptRows(c.table);
  el.innerHTML=`<div class="grid two"><article class="panel"><div class="panel-head"><h3>New ${c.title.replace(/s$/,"")}</h3></div>
  <form class="form generic-form" data-module="${id}">${c.fields.map(fieldHTML).join("")}<button class="primary">Save Record</button></form></article>
  <article class="panel"><div class="panel-head"><h3>All Department Records</h3><span>${rows.length} regional total</span></div><div class="record-list">${rows.map(recordCard).join("")||'<div class="empty">No records.</div>'}</div></article></div>`;
  initSmartCombos(el); el.querySelector("form").onsubmit=saveGeneric; el.querySelectorAll(".record").forEach(r=>r.onclick=()=>openRecord(c.table,r.dataset.id));
 }
-function statusClass(v){v=norm(v);if(/EMERGENCY|FELONY|ACTIVE WARRANT|STOLEN|DENIED|OVERDUE/.test(v))return "red pulse-alert";if(/MISDEMEANOR|HIGH|SEARCH|REVIEW/.test(v))return "amber";if(/CITATION|PENDING|CAUTION/.test(v))return "yellow";if(/APPROVED|CLOSED|SERVED|CLEAR|VALID/.test(v))return "green";if(/JUVENILE|RESTRICTED/.test(v))return "purple";return "blue"}
-function recordCard(r){let title=r.record_no||"RECORD", sub=personName(r)||r.subject||r.call_type||r.incident_type||r.item_description||r.record_type||r.plate||"Untitled";const dept=r.department||"REGIONAL";return `<div class="record" data-id="${r.id}"><div class="record-head"><b>${esc(title)}</b><span class="tag ${statusClass(r.classification||r.action||r.status||r.priority||r.chain_status||"ACTIVE")}">${esc(r.classification||r.action||r.status||r.priority||r.chain_status||"ACTIVE")}</span></div><p><strong>${esc(dept)}</strong> · ${esc(sub)} · ${fmt(r.created_at)}</p></div>`}
+
+function renderPortRecordsPage(){
+ const c=configs.portrecords,el=$("#portrecords"),manual=deptRows("port_records"),entries=deptRows("port_entries");
+ el.innerHTML=`<div class="grid two"><article class="panel"><div class="panel-head"><h3>New Port Record</h3></div>
+ <form class="form generic-form" data-module="portrecords">${c.fields.map(fieldHTML).join("")}<button class="primary">Save Record</button></form></article>
+ <article class="panel"><div class="panel-head"><h3>Gate Entry History</h3><span>${entries.length} regional total</span></div><div class="record-list">${entries.map(r=>`<div class="record gate-history-record" data-id="${r.id}"><div class="record-head"><b>${esc(r.record_no||"GATE ENTRY")}</b><span class="tag ${recordStatusClass(r.status||"PENDING")}">${esc(r.status||"PENDING")}</span></div><p><strong>${esc(r.department||"REGIONAL")}</strong> · ${esc(r.name||[r.first_name,r.last_name].filter(Boolean).join(" ")||"Unknown visitor")} · ${esc(r.plate||"NO PLATE")} · ${fmt(r.time_in||r.created_at)}</p></div>`).join("")||'<div class="empty">No gate entries.</div>'}</div></article></div>
+ <article class="panel"><div class="panel-head"><h3>Other Port Records</h3><span>${manual.length} regional total</span></div><div class="record-list">${manual.map(recordCard).join("")||'<div class="empty">No additional port records.</div>'}</div></article>`;
+ initSmartCombos(el);el.querySelector("form").onsubmit=saveGeneric;
+ el.querySelectorAll(".gate-history-record").forEach(r=>r.onclick=()=>openRecord("port_entries",r.dataset.id));
+ el.querySelectorAll(".record:not(.gate-history-record)").forEach(r=>r.onclick=()=>openRecord("port_records",r.dataset.id));
+}
+
+function recordStatusClass(v){v=norm(v);if(/EMERGENCY|FELONY|ACTIVE WARRANT|STOLEN|DENIED|OVERDUE/.test(v))return "red pulse-alert";if(/MISDEMEANOR|HIGH|SEARCH|REVIEW/.test(v))return "amber";if(/CITATION|PENDING|CAUTION/.test(v))return "yellow";if(/APPROVED|CLOSED|SERVED|CLEAR|VALID/.test(v))return "green";if(/JUVENILE|RESTRICTED/.test(v))return "purple";return "blue"}
+function recordCard(r){let title=r.record_no||"RECORD", sub=personName(r)||r.subject||r.call_type||r.incident_type||r.item_description||r.record_type||r.plate||"Untitled";const dept=r.department||"REGIONAL";return `<div class="record" data-id="${r.id}"><div class="record-head"><b>${esc(title)}</b><span class="tag ${recordStatusClass(r.classification||r.action||r.status||r.priority||r.chain_status||"ACTIVE")}">${esc(r.classification||r.action||r.status||r.priority||r.chain_status||"ACTIVE")}</span></div><p><strong>${esc(dept)}</strong> · ${esc(sub)} · ${fmt(r.created_at)}</p></div>`}
 async function saveGeneric(e){
  e.preventDefault();if(!db)return toast("Database connection is unavailable. Refresh the page.");const id=e.target.dataset.module,c=configs[id],f=new FormData(e.target),obj={record_no:recordNo(c.prefix),department:activeDepartment,created_by:profile.name,unit:profile.unit};
  c.fields.forEach(([k,,type])=>{
@@ -400,9 +413,9 @@ async function checkAndBroadcastSubjectAlerts(subject,source){
 }
 
 function watchMatch(e){return state.watch_list.find(w=>w.status==="ACTIVE"&&((w.name&&e.name&&w.name.toLowerCase()===e.name.toLowerCase())||(w.plate&&e.plate&&w.plate.toLowerCase()===e.plate.toLowerCase())||(w.badge&&e.badge&&w.badge.toLowerCase()===e.badge.toLowerCase())))}
-function activeEntries(){return deptRows("port_entries").filter(x=>!x.time_out&&["APPROVED","RESTRICTED"].includes(norm(x.status)))}
+function activeEntries(){return deptRows("port_entries").filter(x=>!x.time_out&&!["DRAFT","DENIED","CANCELLED","EXITED"].includes(norm(x.status)))}
 function renderOccupancy(){
- let rows=activeEntries();$("#occupancyRows").innerHTML=rows.map(e=>{let m=elapsed(e.time_in),cl=m>=10?"red":m>=5?"amber":"green",st=m>=10?"OVERDUE 10+":m>=5?"OVERDUE 5+":"STILL INSIDE",w=watchMatch(e);
+ let rows=activeEntries();$("#occupancyRows").innerHTML=rows.map(e=>{let m=elapsed(e.time_in),pending=norm(e.status)==="PENDING",cl=pending?"amber":m>=10?"red":m>=5?"amber":"green",st=pending?"AT GATE / PENDING":m>=10?"OVERDUE 10+":m>=5?"OVERDUE 5+":"STILL INSIDE",w=watchMatch(e);
  return `<tr class="occupancy-clickable" data-id="${e.id}"><td>${esc(e.record_no)}</td><td>${esc(e.name)}</td><td>${esc(e.company)}</td><td>${esc(e.plate)}</td><td>${fmt(e.time_in)}</td><td>${m} MIN</td><td><span class="tag ${cl}">${st}</span></td><td>${w?'<span class="tag red">MATCH</span>':'<span class="tag green">CLEAR</span>'}</td></tr>`}).join("")||'<tr><td colspan="8">No active occupants.</td></tr>';
  $("#exitRecord").innerHTML='<option value="">Select...</option>'+rows.map(e=>`<option value="${e.id}">${e.record_no} — ${e.name} — ${e.plate||"NO PLATE"}</option>`).join("");
  $$("#occupancyRows .occupancy-clickable").forEach(x=>x.onclick=()=>openRecord("port_entries",x.dataset.id));
@@ -432,17 +445,17 @@ function renderStatistics(){
  $("#statsDeptLabel").textContent="ALL DEPARTMENTS · REGIONAL TOTALS";$("#statisticsContent").innerHTML=`<div class="stats-grid">${Object.entries(vals).map(([k,v])=>`<div class="stat-tile"><span>${k}</span><strong>${v}</strong></div>`).join("")}</div>`;
 }
 function applyDepartment(){const d=DEPARTMENTS[activeDepartment];document.documentElement.style.setProperty("--dept",d.accent);$("#activeDepartmentName").textContent=d.name;$("#activeDepartmentCode").textContent=activeDepartment;$("#departmentSwitch").value=activeDepartment;document.body.classList.toggle("no-animations",!animationsEnabled);renderAll()}
-function statusClass(status){return `status-${String(status||"OFF DUTY").toLowerCase().replaceAll(" ","-")}`}
+function patrolStatusClass(status){return `status-${String(status||"OFF DUTY").toLowerCase().replaceAll(" ","-")}`}
 function renderPatrolTools(){
  const statuses=["AVAILABLE","TRAFFIC STOP","ON SCENE","WRITING REPORT","HARBOR DETAIL","BUSY","EMERGENCY","OFF DUTY"];
  const current=state.patrol_status.find(x=>norm(x.officer_name)===norm(profile?.name)&&x.department===activeDepartment);
- $("#statusButtons").innerHTML=statuses.map(s=>`<button data-status="${s}" aria-pressed="${current?.status===s}" class="${statusClass(s)} ${current?.status===s?"active-status":""}">${s}</button>`).join("");
+ $("#statusButtons").innerHTML=statuses.map(s=>`<button data-status="${s}" aria-pressed="${current?.status===s}" class="${patrolStatusClass(s)} ${current?.status===s?"active-status":""}">${s}</button>`).join("");
  $$('[data-status]').forEach(b=>b.onclick=()=>setPatrolStatus(b.dataset.status));
- if(current) $("#myStatusTimer").innerHTML=`<span class="status-indicator ${statusClass(current.status)}">${esc(current.status)}</span> · ${Math.max(0,Math.floor((Date.now()-new Date(current.status_since||current.updated_at).getTime())/60000))} min`;
+ if(current) $("#myStatusTimer").innerHTML=`<span class="status-indicator ${patrolStatusClass(current.status)}">${esc(current.status)}</span> · ${Math.max(0,Math.floor((Date.now()-new Date(current.status_since||current.updated_at).getTime())/60000))} min`;
  else $("#myStatusTimer").innerHTML='<span class="status-indicator status-off-duty">NOT SET</span>';
  syncEmergencyUI(current?.status === "EMERGENCY");
  const others=state.patrol_status.filter(x=>norm(x.officer_name)!==norm(profile?.name));
- $("#partnerAwareness").innerHTML=others.map(x=>`<div class="partner-card ${statusClass(x.status)}"><strong>${esc(x.officer_name)}</strong><span>${esc(x.unit_number||"")} · ${esc(x.department||"")}</span><b class="status-indicator ${statusClass(x.status)}">${esc(x.status)}</b><small>${esc(x.location||"No location set")} · ${Math.max(0,Math.floor((Date.now()-new Date(x.status_since||x.updated_at).getTime())/60000))} min</small></div>`).join("")||'<div class="empty">No partner status yet.</div>';
+ $("#partnerAwareness").innerHTML=others.map(x=>`<div class="partner-card ${patrolStatusClass(x.status)}"><strong>${esc(x.officer_name)}</strong><span>${esc(x.unit_number||"")} · ${esc(x.department||"")}</span><b class="status-indicator ${patrolStatusClass(x.status)}">${esc(x.status)}</b><small>${esc(x.location||"No location set")} · ${Math.max(0,Math.floor((Date.now()-new Date(x.status_since||x.updated_at).getTime())/60000))} min</small></div>`).join("")||'<div class="empty">No partner status yet.</div>';
  $("#sharedNotes").innerHTML=state.shared_notes.slice(0,12).map(x=>`<div class="timeline-item"><b>${esc(x.officer_name)}</b> ${esc(x.note)}<br><small>${fmt(x.created_at)}</small></div>`).join("")||'<div class="empty">No shared notes.</div>';
  $("#officerMessages").innerHTML=state.officer_messages.slice(0,15).map(x=>`<div class="timeline-item"><b>${esc(x.officer_name)}</b> ${esc(x.message)}<br><small>${fmt(x.created_at)}</small></div>`).join("")||'<div class="empty">No messages.</div>';
  const reportTables=["incidents","arrests","citations","warrants","bolos"];

@@ -32,3 +32,10 @@ INSTALLATION
 1. Run the complete setup.sql once in Supabase SQL Editor. It adds columns without deleting existing records.
 2. Deploy index.html, styles.css, and app.js to Vercel.
 3. Hard refresh all devices.
+
+VERSION 6.8.1 PORT RECORDS / OCCUPANCY FIX
+- Port Records now shows all Gate Entry History plus manually created port records.
+- Port Occupancy now displays finalized PENDING entries as AT GATE / PENDING.
+- Draft, denied, cancelled, exited, and completed entries are excluded from active occupancy.
+- Existing gate entries are preserved and become clickable from Port Records.
+- No additional SQL changes are required after Version 6.8 setup.sql has been run.

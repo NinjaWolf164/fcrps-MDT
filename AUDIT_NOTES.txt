@@ -1,0 +1,18 @@
+Florence Regional Public Safety Suite V6.8.2 Audit Fix
+
+Static checks completed:
+- JavaScript syntax validation passed with Node.js.
+- HTML duplicate-ID check passed.
+- Port Entry database fields were compared with setup.sql.
+- Port Records render path was reviewed.
+- Port Occupancy render and exit-selection paths were reviewed.
+
+Fixes made:
+1. Port Occupancy used unquoted status names (DRAFT, DENIED, CANCELLED, EXITED), which caused a JavaScript ReferenceError and could stop occupancy, dashboard, and timed refresh rendering.
+2. Two different functions were both named statusClass. JavaScript used only the later definition, which caused record status badges to receive patrol-status classes instead of the intended record badge colors. They are now separated as recordStatusClass and patrolStatusClass.
+
+Deployment:
+- Replace the deployed website files with this build.
+- No additional Supabase SQL is required if V6.8 setup.sql was already run successfully.
+
+Live verification still requires testing against the deployed Supabase project because database permissions, missing schema migrations, storage bucket settings, or Realtime publication settings cannot be proven by static file inspection alone.
