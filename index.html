@@ -92,25 +92,86 @@
 <section id="subjectalerts" class="page"></section>
 
 <section id="gate" class="page">
-  <div class="grid two">
-   <article class="panel"><div class="panel-head"><h3>New Gate Entry</h3></div>
-    <form id="gateForm" class="form">
-      <label>First Name<input name="first_name" required></label><label>Last Name<input name="last_name" required></label><label>Company<input name="company"></label>
-      <label>Visitor Type<select name="visitor_type"><option>VISITOR</option><option>EMPLOYEE</option><option>CONTRACTOR</option><option>DELIVERY</option></select></label>
-      <label>Destination<input name="destination"></label><label>ID / Badge<input name="badge"></label>
-      <label>Plate<input name="plate"></label><label>Vehicle<input name="vehicle"></label>
-      <label>Gate<select name="gate"><option>MILANO ENTRANCE</option><option>MAIN GATE</option><option>OTHER</option></select></label>
-      <label>Access<select name="status"><option>APPROVED</option><option>PENDING</option><option>DENIED</option></select></label>
-      <label class="wide">Notes<textarea name="notes"></textarea></label>
-      <button class="primary" type="submit">Create Entry</button>
-    </form>
-   </article>
-   <article class="panel"><div class="panel-head"><h3>Process Exit</h3></div>
-    <form id="exitForm" class="form"><label class="wide">Active Entry<select id="exitRecord" required></select></label>
-    <label>Exit Gate<input name="exit_gate" value="EXIT GATE"></label><label>Notes<input name="notes"></label>
-    <button class="primary" type="submit">Record Exit</button></form>
-   </article>
-  </div>
+ <div class="gate-layout">
+  <article class="panel gate-wizard-panel">
+   <div class="panel-head"><div><h3>Port Gate Screening</h3><span>Guided entry questionnaire, security check, checklist, and final decision</span></div><div id="gateProgress" class="gate-progress">STEP 1 OF 8</div></div>
+   <form id="gateForm" class="gate-wizard">
+    <div class="wizard-tabs" role="tablist">
+     <button type="button" class="wizard-tab active" data-step="1">1 Initial Contact</button><button type="button" class="wizard-tab" data-step="2">2 Identification</button><button type="button" class="wizard-tab" data-step="3">3 Vehicle</button><button type="button" class="wizard-tab" data-step="4">4 Commercial</button><button type="button" class="wizard-tab" data-step="5">5 Visitor / Contractor</button><button type="button" class="wizard-tab" data-step="6">6 Security</button><button type="button" class="wizard-tab" data-step="7">7 Checklist</button><button type="button" class="wizard-tab" data-step="8">8 Decision</button>
+    </div>
+
+    <fieldset class="wizard-step active" data-step="1"><legend>Initial Contact</legend><p class="question-prompt">Good morning/afternoon. How can I help you today?</p><div class="form">
+      <label>First Name<input name="first_name" required autocomplete="given-name"></label><label>Last Name<input name="last_name" required autocomplete="family-name"></label>
+      <label>Purpose of Visit<input name="purpose_of_visit" required placeholder="Delivery, pickup, meeting, maintenance..."></label><label>Visitor Type<select name="visitor_type" id="gateVisitorType"><option>VISITOR</option><option>EMPLOYEE</option><option>CONTRACTOR</option><option>DELIVERY</option><option>COMMERCIAL DRIVER</option><option>LAW ENFORCEMENT</option><option>EMERGENCY SERVICE</option></select></label>
+      <label>Who Are You Here to See?<input name="contact_person" required></label><label>Destination / Department<input name="destination" required></label>
+      <label>Company / Organization<input name="company"></label><label>Been to Port Before?<select name="prior_visit"><option>NO</option><option>YES</option><option>UNKNOWN</option></select></label>
+    </div></fieldset>
+
+    <fieldset class="wizard-step" data-step="2"><legend>Identification</legend><div class="form">
+      <label>ID Type<select name="id_type"><option>DRIVER LICENSE</option><option>STATE ID</option><option>PASSPORT</option><option>MILITARY ID</option><option>OTHER GOVERNMENT ID</option><option>UNAVAILABLE</option></select></label><label>ID Number<input name="id_number"></label>
+      <label>ID State / Issuer<input name="id_state"></label><label>ID Status<select name="id_status" required><option>VALID</option><option>EXPIRED</option><option>SUSPENDED</option><option>UNAVAILABLE</option><option>UNVERIFIED</option></select></label>
+      <label>Date of Birth<input name="dob" type="date"></label><label>TWIC Card?<select name="twic_status"><option>NOT REQUIRED</option><option>YES - VERIFIED</option><option>YES - NOT VERIFIED</option><option>NO</option></select></label>
+      <label>TWIC Number<input name="twic_number"></label><label>Port Badge?<select name="port_badge_status"><option>NOT APPLICABLE</option><option>YES - ACTIVE</option><option>YES - INACTIVE</option><option>NO</option></select></label>
+      <label>Port Badge Number<input name="badge"></label><button type="button" id="runGateAlertCheck" class="warning-button">Run Subject / Plate Alert Check</button>
+    </div><div id="gateAlertPreview" class="gate-alert-preview empty">No alert check has been run yet.</div></fieldset>
+
+    <fieldset class="wizard-step" data-step="3"><legend>Vehicle and Occupants</legend><div class="form">
+      <label>Vehicle Year<input name="vehicle_year"></label><label>Make<input name="vehicle_make"></label><label>Model<input name="vehicle_model"></label><label>Color<input name="vehicle_color"></label>
+      <label>Vehicle Type<input name="vehicle_type" placeholder="Sedan, pickup, tractor-trailer..."></label><label>Plate Number<input name="plate" required></label><label>Plate State<input name="plate_state" required></label>
+      <label>Vehicle Ownership<select name="vehicle_ownership"><option>OWNER</option><option>COMPANY VEHICLE</option><option>RENTAL</option><option>BORROWED</option><option>OTHER</option></select></label>
+      <label>Pulling a Trailer?<select name="has_trailer" id="hasTrailer"><option>NO</option><option>YES</option></select></label><label class="trailer-field hidden">Trailer Number<input name="trailer_number"></label>
+      <label class="wide">Other Occupants — one per line (First Last | DOB | ID)<textarea name="occupants" placeholder="Jane Smith | 1990-05-10 | OH123456"></textarea></label>
+    </div></fieldset>
+
+    <fieldset class="wizard-step" data-step="4"><legend>Commercial Driver</legend><p class="conditional-note">Complete when the entrant is a commercial driver or delivery.</p><div class="form">
+      <label>Carrier / Delivery Company<input name="carrier_company"></label><label>USDOT Number<input name="usdot_number"></label>
+      <label>Cargo Type<input name="cargo_type"></label><label>Cargo Description<input name="cargo_description"></label>
+      <label>Dock / Facility<input name="dock_destination"></label><label>Shipping Paperwork<select name="shipping_paperwork"><option>NOT APPLICABLE</option><option>VERIFIED</option><option>PRESENT - NOT VERIFIED</option><option>NOT PRESENT</option></select></label>
+      <label>Trailer Sealed?<select name="trailer_sealed"><option>NOT APPLICABLE</option><option>YES</option><option>NO</option></select></label><label>Seal Number<input name="seal_number"></label>
+      <label>Hazardous Materials?<select name="hazmat"><option>NO</option><option>YES</option><option>UNKNOWN</option></select></label><label>Hazmat Class / Description<input name="hazmat_class"></label>
+    </div></fieldset>
+
+    <fieldset class="wizard-step" data-step="5"><legend>Visitor / Contractor</legend><div class="form">
+      <label>Visit Authorized By<input name="authorized_by"></label><label>Appointment / Work Order<input name="appointment_reference"></label>
+      <label>Specific Building / Work Area<input name="work_area"></label><label>Expected Departure<input name="expected_departure" type="datetime-local"></label>
+      <label>On-Site Supervisor<input name="onsite_supervisor"></label><label>Supervisor Contact<input name="supervisor_contact"></label>
+      <label class="wide">Equipment, Tools, Machinery, or Chemicals<textarea name="equipment_tools"></textarea></label>
+      <label>Escort Required?<select name="escort_required"><option>NO</option><option>YES</option><option>TO BE DETERMINED</option></select></label><label>Visitor Badge / Pass Issued<input name="visitor_pass_issued"></label>
+    </div></fieldset>
+
+    <fieldset class="wizard-step" data-step="6"><legend>Security Questions</legend><div class="form">
+      <label>Weapons in Vehicle?<select name="weapons_declared"><option>NO</option><option>YES - DECLARED</option><option>REFUSED TO ANSWER</option></select></label><label>Weapon Description<input name="weapons_description"></label>
+      <label>Hazardous / Explosive / Flammable Materials?<select name="dangerous_materials"><option>NO</option><option>YES - DECLARED</option><option>UNKNOWN</option></select></label><label>Material Description<input name="dangerous_materials_description"></label>
+      <label>Controlled Substances, Alcohol, or Prohibited Items?<select name="prohibited_items"><option>NO</option><option>YES - LAWFUL CARGO</option><option>YES - OTHER</option><option>REFUSED TO ANSWER</option></select></label><label>Explanation<input name="prohibited_items_explanation"></label>
+      <label>Comply With Vehicle Inspection Requirements?<select name="inspection_compliance"><option>YES</option><option>NO</option><option>NOT REQUESTED</option></select></label><label>Search Decision<select name="search_decision"><option>NO SEARCH</option><option>CONSENTED</option><option>REFUSED</option><option>SEARCHED - NO CONTRABAND</option><option>SEARCHED - CONTRABAND FOUND</option><option>REFERRED TO VEHICLE SEARCH REPORT</option></select></label>
+      <label>Refusal / Denial Acknowledged?<select name="refusal_acknowledged"><option>NOT APPLICABLE</option><option>YES</option><option>NO</option></select></label><label>Related Vehicle Search Record<input name="vehicle_search_record"></label>
+    </div></fieldset>
+
+    <fieldset class="wizard-step" data-step="7"><legend>Officer Gate Checklist</legend><div class="gate-checklist">
+      <label><input type="checkbox" name="check_id_verified"> Government identification verified</label><label><input type="checkbox" name="check_badge_verified"> TWIC or port badge verified when required</label>
+      <label><input type="checkbox" name="check_destination_confirmed"> Appointment, host, or destination confirmed</label><label><input type="checkbox" name="check_occupants_identified"> All vehicle occupants identified</label>
+      <label><input type="checkbox" name="check_vehicle_recorded"> Vehicle and plate information recorded</label><label><input type="checkbox" name="check_cargo_checked"> Trailer, cargo, and seal checked when applicable</label>
+      <label><input type="checkbox" name="check_hazmat_verified"> Hazardous materials status verified</label><label><input type="checkbox" name="check_weapons_documented"> Weapons declaration documented</label>
+      <label><input type="checkbox" name="check_search_documented"> Vehicle search decision documented</label><label><input type="checkbox" name="check_escort_determined"> Escort requirement determined</label>
+      <label><input type="checkbox" name="check_alerts_checked"> BOLO or access restriction checked</label><label><input type="checkbox" name="check_decision_recorded"> Final access decision recorded</label>
+      <label><input type="checkbox" name="check_pass_issued"> Visitor badge or pass issued when required</label><label><input type="checkbox" name="check_exit_required"> Exit time and final status must be recorded at departure</label>
+    </div><label class="wide">Checklist Comments<textarea name="checklist_comments"></textarea></label></fieldset>
+
+    <fieldset class="wizard-step" data-step="8"><legend>Gate Decision</legend><div class="form">
+      <label>Access Decision<select name="status" id="gateDecision" required><option>PENDING</option><option>APPROVED</option><option>DENIED</option><option>RESTRICTED</option></select></label><label>Escort Required?<select name="final_escort_required"><option>NO</option><option>YES</option></select></label>
+      <label>Supervisor Notified?<select name="supervisor_notified"><option>NO</option><option>YES</option></select></label><label>Gate<select name="gate"><option>MILANO ENTRANCE</option><option>MAIN GATE</option><option>NORTH GATE</option><option>SOUTH GATE</option><option>SERVICE GATE</option><option>OTHER</option></select></label>
+      <label class="wide">Denial / Restriction Reason<textarea name="denial_reason"></textarea></label><label class="wide">Final Notes<textarea name="notes"></textarea></label>
+    </div></fieldset>
+
+    <div class="wizard-actions"><button type="button" id="gatePrev" class="secondary" disabled>Previous</button><button type="button" id="gateSaveDraft" class="secondary">Save Draft</button><button type="button" id="gateNext" class="primary">Next</button><button type="submit" id="gateSubmit" class="primary hidden">Finalize Gate Entry</button></div>
+   </form>
+  </article>
+
+  <aside class="gate-side">
+   <article class="panel sticky-panel"><div class="panel-head"><h3>Live Screening Summary</h3></div><div id="gateLiveSummary" class="gate-summary empty">Begin entering visitor information.</div><div id="gateRisk" class="gate-risk risk-low"><span>SCREENING FLAGS</span><strong>NO FLAGS</strong><small>Officer judgment controls the final decision.</small></div></article>
+   <article class="panel"><div class="panel-head"><h3>Process Exit</h3></div><form id="exitForm" class="form"><label class="wide">Active Entry<select id="exitRecord" required></select></label><label>Exit Gate<input name="exit_gate" value="EXIT GATE"></label><label>Business Completed?<select name="business_completed"><option>YES</option><option>NO</option><option>RETURNING</option></select></label><label>Unusual Occurrence?<select name="unusual_occurred"><option>NO</option><option>YES</option></select></label><label>Cargo / Equipment Status<select name="cargo_verified"><option>NOT APPLICABLE</option><option>SAME</option><option>ADDED</option><option>REMOVED</option><option>CHANGED</option></select></label><label>Seal Intact?<select name="exit_seal_intact"><option>NOT APPLICABLE</option><option>YES</option><option>NO</option></select></label><label class="wide">Exit Notes<textarea name="notes"></textarea></label><button class="primary" type="submit">Record Exit</button></form></article>
+  </aside>
+ </div>
 </section>
 <section id="occupancy" class="page"><article class="panel"><div class="panel-head"><h3>Live Occupancy Board</h3></div><div class="table-wrap"><table><thead><tr><th>Entry</th><th>Name</th><th>Company</th><th>Plate</th><th>Time In</th><th>Elapsed</th><th>Status</th><th>Watch</th></tr></thead><tbody id="occupancyRows"></tbody></table></div></article></section>
 <section id="portrecords" class="page"></section>

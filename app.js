@@ -300,10 +300,77 @@ function openRecord(table,id){const r=(state[table]||[]).find(x=>String(x.id)===
 async function updateWorkflow(table,id,status){if(!db)return;const r=state[table].find(x=>x.id===id);if(!r)return;const field="status";const old=r[field]||"";const {error}=await db.from(table).update({[field]:status}).eq("id",id);if(error)return toast(error.message);log("STATUS CHANGED",table,r.record_no,`${old||"NONE"} → ${status}`);play(status==="APPROVED"?"success":status==="RETURNED FOR CORRECTION"?"warning":"scan");toast(`${r.record_no} changed to ${status}`);$("#modal").classList.remove("show")}
 $("#modalClose").onclick=()=>$("#modal").classList.remove("show");
 
-$("#gateForm").onsubmit=async e=>{e.preventDefault();if(!db)return toast("Database connection is unavailable. Refresh the page.");let f=new FormData(e.target),o=Object.fromEntries(f);o.record_no=recordNo("FCP-ENT");o.time_in=new Date().toISOString();o.created_by=profile.name;o.unit=profile.unit;o.department=activeDepartment;o.plate=(o.plate||"").toUpperCase();o.name=[o.first_name,o.last_name].filter(Boolean).join(" ").trim()||o.name||"";
- const {error}=await db.from("port_entries").insert(o);if(error)return toast(error.message);await ensurePerson(o.name,"",o.record_no);await ensureVehicle(o.plate,o.record_no,{owner_name:o.name,model:o.vehicle});await checkAndBroadcastSubjectAlerts(o,"port_entries");play(o.status==="DENIED"?"warning":"success");log("GATE ENTRY","Port Operations",o.record_no,`${o.name} ${o.plate}`);e.target.reset();toast(`${o.record_no} created`)};
-$("#exitForm").onsubmit=async e=>{e.preventDefault();if(!db)return toast("Database connection is unavailable. Refresh the page.");let f=new FormData(e.target),id=$("#exitRecord").value;if(!id)return;let o={time_out:new Date().toISOString(),exit_gate:f.get("exit_gate"),exit_notes:f.get("notes"),exit_officer:profile.name};
+let gateStep=1;
+const GATE_STEPS=8;
+function gateFormObject(){
+ const form=$("#gateForm"),fd=new FormData(form),o={};
+ for(const [k,v] of fd.entries()){
+  if(k.startsWith("check_")) continue;
+  o[k]=(v||"").trim?.()??v;
+ }
+ o.checklist={};
+ $$('[name^="check_"]',form).forEach(x=>o.checklist[x.name]=x.checked);
+ o.checklist_comments=fd.get("checklist_comments")||"";
+ return o;
+}
+function setGateStep(n){
+ gateStep=Math.max(1,Math.min(GATE_STEPS,n));
+ $$('.wizard-step').forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===gateStep));
+ $$('.wizard-tab').forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===gateStep));
+ $("#gateProgress").textContent=`STEP ${gateStep} OF ${GATE_STEPS}`;
+ $("#gatePrev").disabled=gateStep===1;
+ $("#gateNext").classList.toggle('hidden',gateStep===GATE_STEPS);
+ $("#gateSubmit").classList.toggle('hidden',gateStep!==GATE_STEPS);
+}
+function gateSummary(){
+ const o=gateFormObject(),name=[o.first_name,o.last_name].filter(Boolean).join(' ')||'Not entered';
+ const checked=Object.values(o.checklist||{}).filter(Boolean).length,total=Object.keys(o.checklist||{}).length;
+ $("#gateLiveSummary").classList.remove('empty');
+ $("#gateLiveSummary").innerHTML=`<dl><dt>Visitor</dt><dd>${esc(name)}</dd><dt>Type</dt><dd>${esc(o.visitor_type||'—')}</dd><dt>Company</dt><dd>${esc(o.company||o.carrier_company||'—')}</dd><dt>Purpose</dt><dd>${esc(o.purpose_of_visit||'—')}</dd><dt>Destination</dt><dd>${esc(o.destination||o.dock_destination||o.work_area||'—')}</dd><dt>Vehicle</dt><dd>${esc([o.vehicle_year,o.vehicle_make,o.vehicle_model,o.vehicle_color].filter(Boolean).join(' ')||'—')}</dd><dt>Plate</dt><dd>${esc([o.plate,o.plate_state].filter(Boolean).join(' / ')||'—')}</dd><dt>Checklist</dt><dd>${checked}/${total} complete</dd><dt>Decision</dt><dd>${esc(o.status||'PENDING')}</dd></dl>`;
+ const flags=[];
+ if(o.id_status&&o.id_status!=='VALID')flags.push(`ID ${o.id_status}`);
+ if(o.inspection_compliance==='NO'||o.search_decision==='REFUSED')flags.push('INSPECTION REFUSAL');
+ if(o.weapons_declared&&o.weapons_declared!=='NO')flags.push('WEAPONS DECLARED');
+ if(o.dangerous_materials&&o.dangerous_materials!=='NO')flags.push('DANGEROUS MATERIALS');
+ if(o.prohibited_items&&o.prohibited_items!=='NO')flags.push('PROHIBITED / CONTROLLED ITEM ANSWER');
+ if(o.hazmat==='YES')flags.push('HAZMAT');
+ if(o.status==='DENIED'||o.status==='RESTRICTED')flags.push(o.status);
+ const risk=$("#gateRisk");risk.className=`gate-risk ${flags.length>=2?'risk-high':flags.length?'risk-medium':'risk-low'}`;risk.querySelector('strong').textContent=flags.length?flags.join(' · '):'NO FLAGS';
+ $(".trailer-field").classList.toggle('hidden',o.has_trailer!=='YES');
+}
+async function gateAlertCheck(showPopup=true){
+ const o=gateFormObject();o.name=[o.first_name,o.last_name].filter(Boolean).join(' ');o.driver_name=o.name;o.dob=o.dob||null;o.plate=(o.plate||'').toUpperCase();
+ const matches=collectSubjectMatches(o);
+ const box=$("#gateAlertPreview");
+ if(!matches.length){box.className='gate-alert-preview no-match';box.innerHTML='<b>NO ACTIVE MATCHES FOUND</b><br><small>Checked warrants, BOLOs, watch list, access restrictions, subject alerts, and plates.</small>';play('success');return []}
+ box.className='gate-alert-preview has-match';box.innerHTML=`<b>${matches.length} ALERT MATCH${matches.length===1?'':'ES'} FOUND</b>${matches.map(m=>`<button type="button" class="attached-report-link" data-record-table="${esc(m.table)}" data-id="${esc(m.row.id)}">${esc(m.reason)} · ${esc(m.row.record_no||m.table)}</button>`).join('')}`;
+ $$('#gateAlertPreview [data-record-table]').forEach(el=>el.onclick=()=>openRecord(el.dataset.recordTable,el.dataset.id));
+ play('critical');if(showPopup)showSubjectAlertModal(matches,o,'GATE SCREENING');return matches;
+}
+function validateGateStep(){
+ const step=$(`.wizard-step[data-step="${gateStep}"]`);const invalid=[...step.querySelectorAll('[required]')].find(x=>!x.value.trim());if(invalid){invalid.focus();toast(`Complete ${invalid.closest('label')?.childNodes[0]?.textContent?.trim()||'the required field'}`);return false}return true;
+}
+$("#gateNext").onclick=()=>{if(validateGateStep())setGateStep(gateStep+1)};
+$("#gatePrev").onclick=()=>setGateStep(gateStep-1);
+$$('.wizard-tab').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.step);if(n<=gateStep||validateGateStep())setGateStep(n)});
+$("#gateForm").addEventListener('input',gateSummary);$("#gateForm").addEventListener('change',gateSummary);
+$("#runGateAlertCheck").onclick=()=>gateAlertCheck(true);
+async function saveGateEntry(finalize=true){
+ if(!db)return toast('Database connection is unavailable. Refresh the page.');
+ const form=$("#gateForm"),raw=gateFormObject();
+ if(finalize&&!form.reportValidity())return;
+ const o={...raw};if(!o.expected_departure)o.expected_departure=null;o.record_no=recordNo('FCP-ENT');o.time_in=new Date().toISOString();o.created_by=profile.name;o.unit=profile.unit;o.department=activeDepartment;o.plate=(o.plate||'').toUpperCase();o.name=[o.first_name,o.last_name].filter(Boolean).join(' ').trim();o.vehicle=[o.vehicle_year,o.vehicle_make,o.vehicle_model,o.vehicle_color].filter(Boolean).join(' ');o.status=finalize?(o.status||'PENDING'):'DRAFT';
+ o.screening_data={...raw,checklist:raw.checklist};delete o.checklist;
+ const matches=await gateAlertCheck(false);o.alert_match_count=matches.length;o.alert_check_at=new Date().toISOString();
+ const {error}=await db.from('port_entries').insert(o);if(error)return toast(error.message);
+ await ensurePerson(o.name,o.dob||'',o.record_no);await ensureVehicle(o.plate,o.record_no,{owner_name:o.name,model:o.vehicle});await checkAndBroadcastSubjectAlerts(o,'port_entries');
+ play(o.status==='DENIED'?'warning':'success');log(finalize?'GATE ENTRY':'GATE DRAFT','Port Operations',o.record_no,`${o.name} ${o.plate}`);form.reset();setGateStep(1);gateSummary();$("#gateAlertPreview").className='gate-alert-preview empty';$("#gateAlertPreview").textContent='No alert check has been run yet.';toast(`${o.record_no} ${finalize?'created':'saved as draft'}`);
+}
+$("#gateSaveDraft").onclick=()=>saveGateEntry(false);
+$("#gateForm").onsubmit=async e=>{e.preventDefault();await saveGateEntry(true)};
+$("#exitForm").onsubmit=async e=>{e.preventDefault();if(!db)return toast("Database connection is unavailable. Refresh the page.");let f=new FormData(e.target),id=$("#exitRecord").value;if(!id)return;let o={time_out:new Date().toISOString(),exit_gate:f.get("exit_gate"),exit_notes:f.get("notes"),exit_officer:profile.name,business_completed:f.get('business_completed'),unusual_occurred:f.get('unusual_occurred'),cargo_verified:f.get('cargo_verified'),exit_seal_intact:f.get('exit_seal_intact')};
  const rec=state.port_entries.find(x=>x.id===id),{error}=await db.from("port_entries").update(o).eq("id",id);if(error)return toast(error.message);play("close");log("EXIT","Port Operations",rec.record_no);e.target.reset();toast("Exit recorded")};
+setGateStep(1);gateSummary();
 
 function collectSubjectMatches(subject={}){
  const matches=[];
@@ -333,7 +400,7 @@ async function checkAndBroadcastSubjectAlerts(subject,source){
 }
 
 function watchMatch(e){return state.watch_list.find(w=>w.status==="ACTIVE"&&((w.name&&e.name&&w.name.toLowerCase()===e.name.toLowerCase())||(w.plate&&e.plate&&w.plate.toLowerCase()===e.plate.toLowerCase())||(w.badge&&e.badge&&w.badge.toLowerCase()===e.badge.toLowerCase())))}
-function activeEntries(){return deptRows("port_entries").filter(x=>!x.time_out&&x.status!=="DENIED")}
+function activeEntries(){return deptRows("port_entries").filter(x=>!x.time_out&&["APPROVED","RESTRICTED"].includes(norm(x.status)))}
 function renderOccupancy(){
  let rows=activeEntries();$("#occupancyRows").innerHTML=rows.map(e=>{let m=elapsed(e.time_in),cl=m>=10?"red":m>=5?"amber":"green",st=m>=10?"OVERDUE 10+":m>=5?"OVERDUE 5+":"STILL INSIDE",w=watchMatch(e);
  return `<tr class="occupancy-clickable" data-id="${e.id}"><td>${esc(e.record_no)}</td><td>${esc(e.name)}</td><td>${esc(e.company)}</td><td>${esc(e.plate)}</td><td>${fmt(e.time_in)}</td><td>${m} MIN</td><td><span class="tag ${cl}">${st}</span></td><td>${w?'<span class="tag red">MATCH</span>':'<span class="tag green">CLEAR</span>'}</td></tr>`}).join("")||'<tr><td colspan="8">No active occupants.</td></tr>';

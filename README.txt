@@ -17,3 +17,18 @@ NEW IN 6.7
 
 IMPORTANT
 This system is intentionally configured for fictional/private gameplay. Do not store real confidential criminal-justice information.
+
+
+VERSION 6.8 — GUIDED PORT GATE SCREENING
+- Eight-step Gate Entry Wizard based on the provided port questions.
+- Identification, TWIC/badge, vehicle, occupants, commercial cargo, contractor, security, checklist, and final decision sections.
+- Automatic subject/plate alert check with clickable matches.
+- Live screening summary and informational screening flags.
+- Save Draft and Finalize workflows.
+- Expanded exit processing for unusual incidents, cargo/equipment, and trailer seals.
+- All gate records continue to synchronize live through the existing port_entries Realtime subscription.
+
+INSTALLATION
+1. Run the complete setup.sql once in Supabase SQL Editor. It adds columns without deleting existing records.
+2. Deploy index.html, styles.css, and app.js to Vercel.
+3. Hard refresh all devices.
