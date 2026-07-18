@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Florence City Public Safety System</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="loginOverlay" class="overlay">
+  <div class="login-card">
+    <div class="seal">FC</div>
+    <h1>Florence City Public Safety</h1><p>Game RMS & Port Operations</p>
+    <label>Officer Name<input id="profileName" placeholder="Officer Smith"></label>
+    <label>Unit Number<input id="profileUnit" placeholder="FCP-101"></label>
+    <label>Department<select id="profileDepartment"><option>FCPD</option><option>FCHP</option><option>VDPS</option><option>HCSO</option><option>JPD</option></select></label>
+    <label>Role<select id="profileRole"><option>PATROL OFFICER</option><option>SUPERVISOR</option><option>CHIEF ADMINISTRATOR</option></select></label>
+    <button id="enterSystem" class="primary">Enter System</button>
+    <small>For game and roleplay use only.</small>
+  </div>
+</div>
+
+<div class="shell">
+<aside>
+  <div class="brand"><div class="mini-seal">FC</div><div><b>FLORENCE CITY</b><span>PUBLIC SAFETY SYSTEM</span></div></div>
+  <nav id="nav">
+    <button class="nav active" data-page="dashboard">Patrol Home</button>
+    <div class="nav-group open"><button class="nav-group-toggle">PATROL OPERATIONS <span>▾</span></button><div class="nav-group-items">
+      <button class="nav" data-page="cad">Active Calls</button><button class="nav" data-page="trafficstops">Traffic Stop Workspace</button><button class="nav" data-page="fieldinterviews">Field Interviews</button><button class="nav" data-page="vehiclesearches">Vehicle Searches</button><button class="nav" data-page="tows">Tow / Impound</button><button class="nav" data-page="shifts">Partner & Unit Status</button><button class="nav" data-page="gate">Port Entry / Exit</button><button class="nav" data-page="visitorpasses">Visitor Passes</button><button class="nav" data-page="accesslist">Access / Blacklist</button><button class="nav" data-page="occupancy">Port Occupancy</button><button class="nav" data-page="portrecords">Port Records</button>
+    </div></div>
+    <div class="nav-group"><button class="nav-group-toggle">REPORTS & RECORDS <span>▾</span></button><div class="nav-group-items">
+      <button class="nav" data-page="incidents">Incidents</button><button class="nav" data-page="arrests">Arrests</button><button class="nav" data-page="citations">Citations & Warnings</button><button class="nav" data-page="warrants">Warrants</button><button class="nav" data-page="bolos">BOLOs</button><button class="nav" data-page="evidence">Evidence</button><button class="nav" data-page="media">Bodycam & Media</button><button class="nav" data-page="court">Court & Case Calendar</button><button class="nav" data-page="equipment">Equipment Checkout</button>
+    </div></div>
+    <div class="nav-group"><button class="nav-group-toggle">INTELLIGENCE <span>▾</span></button><div class="nav-group-items">
+      <button class="nav" data-page="intelligence">Intelligence Center</button><button class="nav" data-page="caseboard">Case Board</button><button class="nav" data-page="addresses">Address Intelligence</button><button class="nav" data-page="people">People</button><button class="nav" data-page="vehicles">Vehicles</button><button class="nav" data-page="companies">Companies</button><button class="nav" data-page="search">Search Everything</button>
+    </div></div>
+    <div class="nav-group"><button class="nav-group-toggle">TOOLS & INSIGHTS <span>▾</span></button><div class="nav-group-items">
+      <button class="nav" data-page="subjectalerts">Subject Alerts</button><button class="nav" data-page="statistics">Analytics</button><button class="nav" data-page="assistant">Smart Assistant</button><button class="nav" data-page="notifications">Notifications</button><button class="nav" data-page="forms">Form Builder</button><button class="nav" data-page="activity">Activity Log</button><button class="nav" data-page="settings">Settings</button>
+    </div></div>
+  </nav>
+</aside>
+
+<main>
+<header>
+  <div><h2 id="pageTitle">Command Dashboard</h2><p id="clock"></p></div>
+  <div class="header-actions"><select id="departmentSwitch" class="dept-switch" title="Switch department"><option value="FCPD">FCPD</option><option value="FCHP">FCHP</option><option value="VDPS">VDPS</option><option value="HCSO">HCSO</option><option value="JPD">JPD</option></select>
+    <button id="emergencyButton" class="emergency-btn">EMERGENCY</button><button id="soundToggle" class="icon-btn">SOUND ON</button>
+    <div id="userBadge" class="user-badge"></div>
+  </div>
+</header>
+
+<section id="dashboard" class="page active">
+  <div class="hero">
+    <div><span>SYSTEM STATUS</span><h3>FLORENCE CITY PUBLIC SAFETY</h3><p>Police RMS and Port Operations connected through Supabase.</p></div>
+    <div id="liveUsers" class="online" title="Active users connected through Supabase Presence">0 ACTIVE USERS</div>
+    <div id="dbStatus" class="online">CONNECTING</div>
+  </div>
+  <div class="department-banner"><div><span>ACTIVE DEPARTMENT</span><strong id="activeDepartmentName">Florence City Police Department</strong></div><small id="activeDepartmentCode">FCPD</small></div>
+  <div class="kpis police-stats">
+    <article><span>Open CAD Calls</span><strong id="kCad">0</strong></article>
+    <article><span>Active Incidents</span><strong id="kInc">0</strong></article>
+    <article><span>Currently Inside</span><strong id="kInside">0</strong></article>
+    <article class="warn"><span>Overdue 5+</span><strong id="k5">0</strong></article>
+    <article class="danger"><span>Overdue 10+</span><strong id="k10">0</strong></article>
+    <article class="danger"><span>Watch Matches</span><strong id="kWatch">0</strong></article>
+  </div>
+  <div class="kpis stats-row">
+    <article class="stat-blue"><span>Total Arrests</span><strong id="kArrests">0</strong></article>
+    <article class="danger"><span>Felony Arrests</span><strong id="kFelony">0</strong></article>
+    <article class="warn"><span>Misdemeanor Arrests</span><strong id="kMisdemeanor">0</strong></article>
+    <article class="stat-yellow"><span>Citations</span><strong id="kCitations">0</strong></article>
+    <article class="stat-cyan"><span>Written Warnings</span><strong id="kWritten">0</strong></article>
+    <article class="stat-soft"><span>Verbal Warnings</span><strong id="kVerbal">0</strong></article>
+  </div>
+  <div class="dashboard-tabs"><button class="dash-tab active" data-dash="patrol">PATROL</button><button class="dash-tab" data-dash="records">RECORDS</button><button class="dash-tab" data-dash="intel">INTELLIGENCE</button><button class="dash-tab" data-dash="analytics">ANALYTICS</button></div>
+  <div class="dash-section active" data-dash-section="patrol">
+    <div class="grid two"><article class="panel"><div class="panel-head"><h3>Quick Patrol Actions</h3></div><div class="quick-actions" id="quickActions"></div></article><article class="panel"><div class="panel-head"><h3>Priority Alerts</h3></div><div id="alerts" class="cards empty">No priority alerts.</div></article></div>
+    <div class="grid two"><article class="panel"><div class="panel-head"><h3>My Status</h3><span id="myStatusTimer"></span></div><div id="statusButtons" class="status-buttons"></div></article><article class="panel"><div class="panel-head"><h3>Partner Awareness</h3></div><div id="partnerAwareness" class="partner-grid"></div></article></div>
+    <div class="grid two"><article class="panel"><div class="panel-head"><h3>Shared Patrol Notes</h3></div><form id="sharedNoteForm" class="inline-compose"><input name="note" placeholder="Add a shared note for both officers" required><button class="primary">Post</button></form><div id="sharedNotes" class="timeline"></div></article><article class="panel"><div class="panel-head"><h3>Officer Chat</h3></div><form id="messageForm" class="inline-compose"><input name="message" placeholder="Message your partner" required><button class="primary">Send</button></form><div id="officerMessages" class="timeline"></div></article></div>
+    <article class="panel"><div class="panel-head"><h3>Recent Shared Activity</h3></div><div id="recentActivity" class="timeline"></div></article>
+  </div>
+  <div class="dash-section" data-dash-section="records"><div class="grid two"><article class="panel"><div class="panel-head"><h3>Report Workload</h3></div><div id="reportWorkload" class="stats-grid"></div></article><article class="panel"><div class="panel-head"><h3>Recent Reports</h3></div><div id="recentReports" class="record-list"></div></article></div></div>
+  <div class="dash-section" data-dash-section="intel"><article class="panel"><div class="panel-head"><h3>Cross-Department Intelligence Snapshot</h3></div><div id="intelSnapshot"></div></article></div>
+  <div class="dash-section" data-dash-section="analytics"><article class="panel"><div class="panel-head"><h3>Today at a Glance</h3></div><div id="dashboardAnalytics"></div></article></div>
+</section>
+
+<section id="cad" class="page"></section>
+<section id="incidents" class="page"></section>
+<section id="arrests" class="page"></section>
+<section id="citations" class="page"></section>
+<section id="warrants" class="page"></section>
+<section id="bolos" class="page"></section>
+<section id="subjectalerts" class="page"></section>
+
+<section id="gate" class="page">
+  <div class="grid two">
+   <article class="panel"><div class="panel-head"><h3>New Gate Entry</h3></div>
+    <form id="gateForm" class="form">
+      <label>First Name<input name="first_name" required></label><label>Last Name<input name="last_name" required></label><label>Company<input name="company"></label>
+      <label>Visitor Type<select name="visitor_type"><option>VISITOR</option><option>EMPLOYEE</option><option>CONTRACTOR</option><option>DELIVERY</option></select></label>
+      <label>Destination<input name="destination"></label><label>ID / Badge<input name="badge"></label>
+      <label>Plate<input name="plate"></label><label>Vehicle<input name="vehicle"></label>
+      <label>Gate<select name="gate"><option>MILANO ENTRANCE</option><option>MAIN GATE</option><option>OTHER</option></select></label>
+      <label>Access<select name="status"><option>APPROVED</option><option>PENDING</option><option>DENIED</option></select></label>
+      <label class="wide">Notes<textarea name="notes"></textarea></label>
+      <button class="primary" type="submit">Create Entry</button>
+    </form>
+   </article>
+   <article class="panel"><div class="panel-head"><h3>Process Exit</h3></div>
+    <form id="exitForm" class="form"><label class="wide">Active Entry<select id="exitRecord" required></select></label>
+    <label>Exit Gate<input name="exit_gate" value="EXIT GATE"></label><label>Notes<input name="notes"></label>
+    <button class="primary" type="submit">Record Exit</button></form>
+   </article>
+  </div>
+</section>
+<section id="occupancy" class="page"><article class="panel"><div class="panel-head"><h3>Live Occupancy Board</h3></div><div class="table-wrap"><table><thead><tr><th>Entry</th><th>Name</th><th>Company</th><th>Plate</th><th>Time In</th><th>Elapsed</th><th>Status</th><th>Watch</th></tr></thead><tbody id="occupancyRows"></tbody></table></div></article></section>
+<section id="portrecords" class="page"></section>
+
+<section id="intelligence" class="page"><article class="panel"><div class="panel-head"><h3>Florence Intelligence Center</h3><span>Automatically connects records across every department</span></div><input id="intelSearch" class="searchbox" placeholder="Search a person, plate, company, record number, or location"><div id="intelResults"></div></article></section>
+<section id="people" class="page"></section><section id="vehicles" class="page"></section>
+<section id="evidence" class="page"></section>
+<section id="media" class="page">
+ <div class="grid two">
+  <article class="panel"><div class="panel-head"><h3>Add Bodycam / Media</h3></div>
+   <form id="mediaForm" class="form">
+    <label>Related Record Number<input name="related_record" required placeholder="INC-000001"></label>
+    <label>Media Type<select name="media_type"><option>BODYCAM</option><option>DASHCAM</option><option>CCTV</option><option>SCREENSHOT</option><option>PHOTO</option><option>AUDIO</option></select></label>
+    <label>Title<input name="title" required></label><label>Officer / Source<input name="officer"></label>
+    <label>Date & Time<input name="recorded_at" type="datetime-local"></label>
+    <label>Status<select name="status"><option>UPLOADED</option><option>REVIEWED</option><option>RESTRICTED</option><option>ARCHIVED</option></select></label>
+    <label class="wide">External Video / Drive Link<input name="external_url" type="url" placeholder="https://..."></label>
+    <label class="wide">Upload File<input id="mediaFile" type="file" accept="video/*,audio/*,image/*"></label>
+    <label class="wide">Description<textarea name="description"></textarea></label>
+    <button class="primary" type="submit">Save Linked Media</button>
+   </form>
+  </article>
+  <article class="panel"><div class="panel-head"><h3>Media Preview</h3></div><div id="mediaPreview" class="preview empty">Select a media record to preview it.</div></article>
+ </div>
+ <article class="panel"><div class="panel-head"><h3>Linked Media Records</h3></div><div id="mediaRecords"></div></article>
+</section>
+<section id="search" class="page"><article class="panel"><div class="panel-head"><h3>Universal Search</h3></div><input id="globalSearch" class="searchbox" placeholder="Search any name, plate, record number, officer, company, or keyword"><div id="searchResults"></div></article></section>
+<section id="statistics" class="page"><article class="panel"><div class="panel-head"><h3>Department Statistics</h3><span id="statsDeptLabel"></span></div><div id="statisticsContent"></div></article></section>
+<section id="companies" class="page"></section><section id="shifts" class="page"></section><section id="forms" class="page"><div class="grid two"><article class="panel"><div class="panel-head"><h3>Create Custom Form</h3></div><form id="formBuilder" class="form"><label>Form Name<input name="name" required placeholder="Trespass Notice"></label><label>Department<select name="department"><option>ALL</option><option>FCPD</option><option>FCHP</option><option>VDPS</option><option>HCSO</option><option>JPD</option></select></label><label class="wide">Fields (one per line)<textarea name="fields" required placeholder="Person Name|text
+Date|date
+Reason|combo
+Signature|text"></textarea></label><button class="primary">Save Form Template</button></form></article><article class="panel"><div class="panel-head"><h3>Saved Forms</h3></div><div id="savedForms"></div></article></div></section>
+
+<section id="trafficstops" class="page"></section>
+<section id="fieldinterviews" class="page"></section>
+<section id="vehiclesearches" class="page"></section>
+<section id="tows" class="page"></section>
+<section id="visitorpasses" class="page"></section>
+<section id="accesslist" class="page"></section>
+<section id="court" class="page"></section>
+<section id="equipment" class="page"></section>
+<section id="addresses" class="page"><article class="panel"><div class="panel-head"><h3>Address Intelligence</h3><span>Find every connected person, vehicle, report, and port contact</span></div><input id="addressSearch" class="searchbox" placeholder="Enter an address or location"><div id="addressResults"></div></article></section>
+<section id="caseboard" class="page"><article class="panel"><div class="panel-head"><h3>Visual Case Board</h3><span>Enter a record number to map connected records</span></div><input id="caseBoardSearch" class="searchbox" placeholder="INC-000001, person, plate, or company"><div id="caseBoardResults" class="case-board"></div></article></section>
+<section id="assistant" class="page"><div class="grid two"><article class="panel"><div class="panel-head"><h3>Smart RMS Assistant</h3><span>Local search and drafting helper</span></div><form id="assistantForm" class="assistant-compose"><textarea name="question" placeholder="Try: show active warrants, find red trucks, summarize INC-..., draft a traffic-stop narrative"></textarea><button class="primary">Ask Assistant</button></form><div class="assistant-note">This helper searches records already in this RMS. It does not send data to an outside AI service.</div></article><article class="panel"><div class="panel-head"><h3>Assistant Response</h3></div><div id="assistantResponse" class="assistant-response empty">Ask a question to begin.</div></article></div></section>
+<section id="notifications" class="page"><article class="panel"><div class="panel-head"><h3>Notification Center</h3><button id="markNotificationsRead" class="secondary">Mark All Read</button></div><div id="notificationRows" class="timeline"></div></article></section>
+
+<section id="activity" class="page"><article class="panel"><div class="panel-head"><h3>System Activity Log</h3></div><div id="activityRows" class="timeline"></div></article></section>
+<section id="settings" class="page">
+ <div class="grid two">
+  <article class="panel"><div class="panel-head"><h3>Sound Settings</h3></div>
+   <label class="switchline"><span>Master sounds</span><input id="masterSound" type="checkbox" checked></label>
+   <label>Sound Pack<select id="soundPack"><option value="sonoran">Realistic CAD Sound Set</option><option value="console">Professional CAD Console</option><option value="mdc">MDC-Inspired Radio Chirps</option><option value="subdued">Subdued Office Tones</option><option value="silent">Silent Pack</option></select></label><label>Volume <span class="volume-note">(default: loud)</span><input id="soundVolume" type="range" min="0" max="1" step=".05" value=".90"></label>
+   <label class="switchline"><span>Animated priority alerts</span><input id="animationsEnabled" type="checkbox" checked></label>
+   <div class="sound-tests"><button data-sound="dispatch">Test Call Open</button><button data-sound="warning">Test Call Edit</button><button data-sound="close">Test Call Close</button><button data-sound="scan">Test Notification</button><button data-sound="critical">Test Signal 100</button><button data-sound="success">Test Acknowledge</button><button data-sound="timer">Test Timer</button></div>
+  </article>
+  <article class="panel"><div class="panel-head"><h3>Current User</h3></div><div id="profileDisplay"></div><button id="changeProfile" class="secondary">Change Profile</button></article>
+ </div>
+ <article class="panel"><div class="panel-head"><h3>Dropdown Manager</h3><span>Searchable lists still allow custom text</span></div>
+   <div class="form dropdown-manager"><label>Field<select id="dropdownField"></select></label><label>New Choice<input id="dropdownChoice" placeholder="Type a new permanent choice"></label><button id="addDropdownChoice" class="primary" type="button">Add Choice</button></div>
+   <div id="dropdownChoices" class="choice-list"></div>
+ </article>
+
+ <article class="panel danger-zone"><div class="panel-head"><div><h3>Record Management</h3><span>Permanently remove saved records from Supabase</span></div></div>
+   <div class="form record-management">
+    <label>Record Category<select id="clearTable"></select></label>
+    <label>Scope<select id="clearScope"><option value="department">Current Department Only</option><option value="all">All Departments</option></select></label>
+    <label class="wide">Confirmation<input id="clearConfirmation" placeholder="Type DELETE to enable clearing"></label>
+    <button id="clearSelectedRecords" class="danger-button wide" type="button" disabled>Clear Selected Records</button>
+   </div>
+   <p class="danger-help">This is permanent and synchronizes to everyone online. Individual records can also be removed from the record-details window.</p>
+ </article>
+</section>
+</main>
+</div>
+<div id="modal" class="modal"><div class="modal-card"><button id="modalClose" class="close">×</button><div id="modalContent"></div></div></div>
+<div id="toast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body></html>
